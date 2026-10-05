@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Math Learning | Bangun Ruang Sisi Lengkung</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+      :root {
+        --primary: #4f46e5;
+        --secondary: #7c3aed;
+        --accent: #f59e0b;
+        --success: #16a34a;
+        --danger: #dc2626;
+        --light: #eef2ff;
+        --panel: #ffffff;
+        --text: #1f2937;
+        --muted: #4b5563;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+        color: var(--text);
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+
+      .app {
+        width: min(1200px, 100%);
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 28px;
+        box-shadow: 0 20px 60px rgba(79, 70, 229, 0.15);
+        border: 1px solid rgba(79, 70, 229, 0.08);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        padding: 28px 24px;
+        text-align: center;
+      }
+
+      .header h1 {
+        margin: 0 0 8px;
+        font-size: clamp(2rem, 4vw, 3rem);
+      }
+
+      .header p {
+        margin: 0;
+        font-size: 1rem;
+        opacity: 0.95;
+      }
+
+      .content {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 24px;
+        padding: 24px;
+      }
+
+      @media (max-width: 900px) {
+        .content { grid-template-columns: 1fr; }
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid rgba(79, 70, 229, 0.08);
+        border-radius: 22px;
+        box-shadow: 0 14px 35px rgba(31, 41, 55, 0.06);
+        padding: 20px;
+      }
+
+      .panel h2 {
+        margin: 0 0 16px;
+        color: var(--primary);
+        font-size: 1.35rem;
+      }
+
+      .shape-selector {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+
+      .shape-btn, .zoom-btn, .btn {
+        border: 2px solid #dfe7ff;
+        background: white;
+        color: var(--text);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: 0.2s ease;
+        font-weight: 700;
+      }
+
+      .shape-btn {
+        flex: 1;
+        min-width: 110px;
+        padding: 12px 14px;
+      }
+
+      .shape-btn.active, .zoom-btn.active {
+        color: white;
+        border-color: transparent;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+      }
+
+      .shape-btn:hover, .zoom-btn:hover, .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(79,70,229,0.12);
+      }
+
+      .canvas-wrap {
+        position: relative;
+        width: 100%;
+        height: 420px;
+        border-radius: 18px;
+        overflow: hidden;
+        background: linear-gradient(180deg, #edf6ff, #f6f3ff);
+        border: 1px solid rgba(79,70,229,0.08);
+      }
+
+      #canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        cursor: grab;
+      }
+
+      #canvas:active { cursor: grabbing; }
+
+      .focus-label {
+        position: absolute;
+        right: 14px;
+        top: 14px;
+        background: rgba(255,255,255,0.96);
+        border: 2px solid var(--primary);
+        border-radius: 12px;
+        padding: 10px 12px;
+        color: var(--primary);
+        font-weight: 800;
+        font-size: 0.82rem;
+        max-width: 240px;
+        line-height: 1.5;
+        box-shadow: 0 10px 20px rgba(79,70,229,0.08);
+        opacity: 0;
+        transform: translateY(-8px) scale(0.95);
+        transition: all 0.25s ease;
+        pointer-events: none;
+      }
+
+      .focus-label.show {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+
+      .focus-label strong {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--secondary);
+      }
+
+      .zoom-controls {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .zoom-btn {
+        padding: 12px 10px;
+      }
+
+      .info-box {
+        margin-top: 18px;
+        background: linear-gradient(180deg, #f9f7ff, #f3f7ff);
+        border-left: 4px solid var(--primary);
+        border-radius: 14px;
+        padding: 18px;
+      }
+
+      .info-box h3 {
+        margin: 0 0 8px;
+        color: var(--primary);
+        font-size: 1.15rem;
+      }
+
+      .info-box p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .formula-box {
+        margin-top: 14px;
+        background: #fff8dc;
+        border: 1px solid rgba(245,158,11,0.35);
+        color: #7c5a00;
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-weight: 800;
+        font-family: "Courier New", monospace;
+        line-height: 1.5;
+      }
+
+      .concept-card {
+        margin-top: 16px;
+        background: #f3f4f6;
+        border-radius: 14px;
+        padding: 16px;
+      }
+
+      .concept-card h4 {
+        margin: 0 0 8px;
+        color: var(--secondary);
+        font-size: 1rem;
+      }
+
+      .concept-card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .quiz-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      .quiz-header h2 {
+        margin: 0;
+        font-size: 1.35rem;
+      }
+
+      .quiz-header small {
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .difficulty-badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 0.73rem;
+        font-weight: 800;
+        margin-bottom: 12px;
+      }
+
+      .difficulty-easy {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .difficulty-medium {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .difficulty-hard {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .progress {
+        height: 10px;
+        background: #e5e7eb;
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 18px;
+      }
+
+      .progress-bar {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        border-radius: inherit;
+        transition: width 0.25s ease;
+      }
+
+      .question h3 {
+        margin: 0 0 16px;
+        line-height: 1.6;
+        color: var(--text);
+        font-size: 1.03rem;
+      }
+
+      .options {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .option {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border: 2px solid #e5e7eb;
+        background: white;
+        border-radius: 12px;
+        padding: 14px 16px;
+        cursor: pointer;
+        transition: 0.2s ease;
+        font-weight: 600;
+      }
+
+      .option:hover {
+        border-color: #c7d2fe;
+        background: #f8faff;
+      }
+
+      .option input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--primary);
+      }
+
+      .option.correct {
+        background: #dcfce7;
+        border-color: #22c55e;
+        color: #14532d;
+      }
+
+      .option.incorrect {
+        background: #fee2e2;
+        border-color: #ef4444;
+        color: #7f1d1d;
+      }
+
+      .feedback {
+        display: none;
+        margin-top: 16px;
+        border-radius: 12px;
+        padding: 12px 14px;
+        line-height: 1.7;
+        font-weight: 600;
+      }
+
+      .feedback.show { display: block; }
+      .feedback.correct {
+        background: #dcfce7;
+        border: 1px solid rgba(34,197,94,0.4);
+        color: #166534;
+      }
+      .feedback.incorrect {
+        background: #fee2e2;
+        border: 1px solid rgba(239,68,68,0.3);
+        color: #991b1b;
+      }
+
+      .explanation {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid currentColor;
+        opacity: 0.95;
+      }
+
+      .btn-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 18px;
+      }
+
+      .btn {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        border: none;
+        font-size: 0.98rem;
+      }
+
+      .btn[disabled] {
+        opacity: 0.45;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+      }
+
+      .qr-box {
+        margin-top: 24px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, #f9fafb, #f3f4f6);
+        border: 1px solid rgba(79,70,229,0.08);
+        padding: 20px;
+      }
+
+      .qr-box h2 {
+        margin: 0 0 8px;
+        color: var(--primary);
+      }
+
+      .qr-box p {
+        margin: 0 0 18px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      #qrCode {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 220px;
+        border-radius: 16px;
+        background: white;
+        border: 1px solid rgba(79,70,229,0.08);
+        padding: 12px;
+      }
+
+      .session-chip {
+        margin-top: 14px;
+        background: #eef2ff;
+        color: var(--primary);
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-family: "Courier New", monospace;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        word-break: break-all;
+      }
+
+      .result-panel {
+        display: none;
+        text-align: center;
+        margin-top: 18px;
+      }
+
+      .result-panel.show { display: block; }
+
+      .score {
+        font-size: clamp(2.2rem, 5vw, 3.4rem);
+        font-weight: 900;
+        margin: 12px 0;
+        color: var(--primary);
+      }
+
+      .score.excellent { color: var(--success); }
+      .score.good { color: var(--primary); }
+      .score.fair { color: #d97706; }
+      .score.poor { color: var(--danger); }
+
+      .result-message {
+        color: var(--muted);
+        line-height: 1.7;
+        margin-bottom: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <h1>🎓 Math Learning</h1>
+        <p>Pembelajaran Interaktif Bangun Ruang Sisi Lengkung Kelas 9</p>
+      </header>
+
+      <main class="content">
+        <section class="panel">
+          <h2>📐 Visualisasi 3D</h2>
+
+          <div class="shape-selector">
+            <button class="shape-btn active" data-shape="cylinder">Tabung</button>
+            <button class="shape-btn" data-shape="cone">Kerucut</button>
+            <button class="shape-btn" data-shape="sphere">Bola</button>
+          </div>
+
+          <div class="canvas-wrap">
+            <canvas id="canvas"></canvas>
+            <div id="focusLabel" class="focus-label">
+              <strong>Rumus</strong>
+              <span id="focusFormula">Luas Alas = πr²</span>
+            </div>
+          </div>
+
+          <div id="partTabs" class="zoom-controls"></div>
+
+          <div class="info-box">
+            <h3 id="partTitle">Alas Tabung</h3>
+            <p id="partDescription">Alas tabung berbentuk lingkaran. Rumus luas alas didasarkan pada luas lingkaran.</p>
+            <div id="formulaBox" class="formula-box">Luas Alas = πr²</div>
+
+            <div class="concept-card">
+              <h4 id="conceptTitle">Bagaimana rumus itu didapat?</h4>
+              <p id="conceptText">Alas tabung dapat diturunkan dari luas lingkaran. Karena lingkaran dibentuk dari banyak potongan kecil dan disusun secara menyerupai jajar genjang, maka hasilnya menjadi πr².</p>
+            </div>
+          </div>
+        </section>
+
+        <aside class="panel">
+          <div class="quiz-header">
+            <h2>❓ Latihan Soal</h2>
+            <small id="questionCounter">Soal 1 dari 3</small>
+          </div>
+
+          <div class="progress"><div id="progressBar" class="progress-bar"></div></div>
+
+          <div id="quizContainer">
+            <div id="quizContent"></div>
+            <div class="btn-row">
+              <button id="nextBtn" class="btn" disabled>Lanjut</button>
+            </div>
+          </div>
+
+          <div id="resultPanel" class="result-panel">
+            <div id="scoreDisplay" class="score">0/3</div>
+            <div id="resultMessage" class="result-message"></div>
+            <button id="restartBtn" class="btn">Mulai Ulang</button>
+          </div>
+        </aside>
+      </main>
+
+      <section class="panel" style="margin: 0 24px 24px;">
+        <div class="qr-box">
+          <h2>📱 Scan QR untuk membuka sesi baru</h2>
+          <p>Setiap scan akan membawa ke sesi yang berbeda. Soal akan diacak agar pengalaman belajar lebih variatif.</p>
+          <div id="qrCode"></div>
+          <div id="sessionCode" class="session-chip">Kode Sesi: -</div>
+        </div>
+      </section>
+    </div>
+
+    <script src="./quiz-data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
