@@ -1,31 +1,32 @@
 // 🎮 GAME-LIKE INTERACTIVE LEARNING APP
 const shapeInfo = {
   cylinder: {
-    base: { title: "🎯 Alas Tabung", description: "Alas tabung berbentuk lingkaran.", formula: "πr²", concept: "Luas lingkaran dengan jari-jari r", explanation: "Alas dibentuk dari lingkaran sempurna, rumusnya sama dengan luas lingkaran biasa." },
-    lateral: { title: "🔄 Selimut Tabung", description: "Sisi lengkung tabung.", formula: "2πrt", concept: "Persegi panjang dengan panjang = keliling", explanation: "Saat dibuka, selimut membentuk persegi panjang dengan panjang = 2πr (keliling) dan lebar = t (tinggi)." },
-    height: { title: "📏 Tinggi Tabung", description: "Jarak antara alas dan tutup.", formula: "πr²t (Volume)", concept: "Faktor penting volume", explanation: "Tinggi menentukan seberapa dalam tabung. Semakin tinggi, semakin besar volume." }
+    base: { title: "🎯 Alas Tabung", description: "Alas tabung berbentuk lingkaran.", formula: "πr²", concept: "Luas lingkaran dengan jari-jari r", explanation: "Alas dibentuk dari lingkaran sempurna. Luas alas = π × r², di mana r adalah jari-jari." },
+    lateral: { title: "🔄 Selimut Tabung", description: "Sisi lengkung tabung.", formula: "2πrt", concept: "Persegi panjang dengan panjang = keliling lingkaran", explanation: "Saat dibuka, selimut membentuk persegi panjang dengan panjang = 2πr (keliling alas) dan lebar = t (tinggi)." },
+    height: { title: "📏 Tinggi Tabung", description: "Jarak antara alas dan tutup.", formula: "Luas Permukaan = 2πr² + 2πrt", concept: "Faktor penting", explanation: "Tinggi (t) adalah jarak vertikal antara alas dan tutup tabung. Makin tinggi, makin besar volume dan luas permukaan." },
   },
   cone: {
-    base: { title: "🎯 Alas Kerucut", description: "Alas kerucut berbentuk lingkaran.", formula: "πr²", concept: "Sama seperti tabung", explanation: "Kerucut juga punya alas lingkaran, jadi rumus luasnya sama: πr²." },
-    lateral: { title: "🔄 Selimut Kerucut", description: "Sisi lengkung kerucut.", formula: "πrs", concept: "Juring lingkaran", explanation: "Saat dibuka, selimut kerucut membentuk juring dengan luas = πrs (r = jari-jari, s = garis pelukis)." },
-    height: { title: "📐 Garis Pelukis", description: "Garis dari puncak ke tepi alas.", formula: "√(r² + t²)", concept: "Teorema Pythagoras", explanation: "Garis pelukis adalah hipotenusa segitiga siku-siku antara tinggi dan jari-jari." }
+    base: { title: "🎯 Alas Kerucut", description: "Alas kerucut berbentuk lingkaran.", formula: "πr²", concept: "Sama seperti tabung", explanation: "Kerucut juga punya alas lingkaran dengan rumus luas yang sama: Luas Alas = π × r²." },
+    lateral: { title: "🔄 Selimut Kerucut", description: "Sisi lengkung kerucut.", formula: "πrs", concept: "Juring lingkaran", explanation: "Saat dibuka, selimut kerucut membentuk juring dengan jari-jari s (garis pelukis) dan panjang busur 2πr." },
+    height: { title: "📐 Garis Pelukis", description: "Garis dari puncak ke tepi alas.", formula: "s = √(r² + t²)", concept: "Teorema Pythagoras", explanation: "Garis pelukis (s) adalah hipotenusa yang menghubungkan puncak dengan tepi alas. Panjangnya dihitung dengan Pythagoras." },
   },
   sphere: {
-    base: { title: "⚪ Permukaan Bola", description: "Seluruh bagian luar bola.", formula: "4πr²", concept: "4 × luas lingkaran", explanation: "Permukaan bola setara dengan 4 lingkaran besar, jadi luasnya 4πr²." },
-    lateral: { title: "⚪ Permukaan Bola", description: "Semua titik berjarak r dari pusat.", formula: "4πr²", concept: "Rumus universal", explanation: "Tidak ada pembedaan di bola, semuanya permukaan dengan rumus 4πr²." },
-    height: { title: "🔊 Jari-jari Bola", description: "Jarak pusat ke permukaan.", formula: "(4/3)πr³ (Volume)", concept: "r³ sangat penting!", explanation: "Volume bola menggunakan r³ (bukan r²) karena bola 3D sempurna." }
+    base: { title: "⚪ Luas Permukaan Bola", description: "Seluruh bagian luar bola.", formula: "4πr²", concept: "4 × luas lingkaran besar", explanation: "Permukaan bola setara dengan 4 lingkaran besar. Luas Permukaan = 4 × π × r²." },
+    lateral: { title: "⚪ Volume Bola", description: "Isi dalam bola.", formula: "(4/3)πr³", concept: "Kapasitas bola", explanation: "Volume bola dihitung dengan rumus V = (4/3) × π × r³, di mana r adalah jari-jari bola." },
+    height: { title: "🔊 Jari-jari Bola", description: "Jarak pusat ke permukaan.", formula: "r = diameter ÷ 2", concept: "Dimensi utama bola", explanation: "Jari-jari (r) adalah jarak dari pusat bola ke permukaan. Diameter adalah 2 × jari-jari. Semua titik di permukaan berjarak sama dari pusat." },
   }
 };
 
 let scene, camera, renderer, mesh, sessionId = '', currentShape = 'cylinder', currentZoom = 'base';
 let quizState = { currentQuestion: 0, score: 0, selectedAnswer: null, answered: false, questions: [] };
+let dashLines = []; // Untuk menyimpan garis putus-putus
 
 // 🔐 UTILITY FUNCTIONS
 function hashSeed(str) { let h = 0; for (let i = 0; i < str.length; i++) { h = (h << 5) - h + str.charCodeAt(i); h |= 0; } return Math.abs(h); }
 function shuffleSeeded(arr, seed) { const copy = [...arr]; let s = seed; for (let i = copy.length - 1; i > 0; i--) { s = (s * 9301 + 49297) % 233280; const r = s / 233280; const j = Math.floor(r * (i + 1)); [copy[i], copy[j]] = [copy[j], copy[i]]; } return copy; }
 function getSessionFromURL() { return new URLSearchParams(window.location.search).get('session'); }
-function ensureSession() { sessionId = getSessionFromURL() || `SESI-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`; const url = new URL(window.location.href); url.searchParams.set('session', sessionId); window.history.replaceState({}, '', url); document.getElementById('sessionCode').textContent = '📍 Kode: ' + sessionId; }
-function generateQRCode() { const url = `${window.location.origin}${window.location.pathname}?session=${sessionId}`; const qrBox = document.getElementById('qrCode'); qrBox.innerHTML = ''; QRCode.toCanvas(qrBox, url, { width: 280, margin: 2, color: { dark: '#667eea', light: '#ffffff' } }); }
+function ensureSession() { sessionId = getSessionFromURL() || `SESI-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`; const url = new URL(window.location); url.searchParams.set('session', sessionId); window.history.replaceState({}, '', url); }
+function generateQRCode() { const url = `${window.location.origin}${window.location.pathname}?session=${sessionId}`; const qrBox = document.getElementById('qrCode'); qrBox.innerHTML = ''; QRCode.toCanvas(qrBox, url, { width: 200, margin: 2 }, err => { if (err) console.error(err); }); document.getElementById('sessionCode').textContent = `Kode: ${sessionId}`; }
 
 // 🎨 THREE.JS SETUP
 function initThreeJS() {
@@ -46,19 +47,145 @@ function initThreeJS() {
   animate();
 }
 
+// Fungsi untuk membuat garis putus-putus
+function createDashedLine(start, end, color = 0xff6b6b, dashSize = 0.08, gapSize = 0.06) {
+  const points = [];
+  const direction = new THREE.Vector3().subVectors(end, start).normalize();
+  const distance = start.distanceTo(end);
+  let currentPos = start.clone();
+  
+  while (currentPos.distanceTo(end) > 0.01) {
+    const segmentEnd = currentPos.clone().addScaledVector(direction, Math.min(dashSize, currentPos.distanceTo(end)));
+    points.push(currentPos.clone());
+    points.push(segmentEnd);
+    currentPos.addScaledVector(direction, dashSize + gapSize);
+  }
+  
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const material = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const line = new THREE.LineSegments(geometry, material);
+  return line;
+}
+
 function drawShape() {
   if (mesh) scene.remove(mesh);
+  dashLines.forEach(line => scene.remove(line));
+  dashLines = [];
+  
   const material = new THREE.MeshPhongMaterial({
     color: 0x667eea, shininess: 120, emissive: 0x1a1a2e, emissiveIntensity: 0.08
   });
   let geometry;
-  if (currentShape === 'cylinder') geometry = new THREE.CylinderGeometry(1, 1, 2.2, 48);
-  else if (currentShape === 'cone') geometry = new THREE.ConeGeometry(1.2, 2.6, 48);
-  else geometry = new THREE.SphereGeometry(1.3, 48, 48);
-  mesh = new THREE.Mesh(geometry, material);
+  
+  if (currentShape === 'cylinder') {
+    geometry = new THREE.CylinderGeometry(1, 1, 2.2, 48);
+    mesh = new THREE.Mesh(geometry, material);
+    
+    // Garis putus-putus untuk TABUNG
+    if (currentZoom === 'height') {
+      // Garis tinggi di tengah
+      const heightLine = createDashedLine(new THREE.Vector3(0, -1.1, 0), new THREE.Vector3(0, 1.1, 0), 0xff6b6b);
+      scene.add(heightLine);
+      dashLines.push(heightLine);
+      
+      // Label tinggi
+      const heightLabel = createTextLabel('t (tinggi)', new THREE.Vector3(0.3, 0, 0));
+      scene.add(heightLabel);
+      dashLines.push(heightLabel);
+    } else if (currentZoom === 'base') {
+      // Garis jari-jari
+      const radiusLine = createDashedLine(new THREE.Vector3(0, 1.1, 0), new THREE.Vector3(1, 1.1, 0), 0x4ecdc4);
+      scene.add(radiusLine);
+      dashLines.push(radiusLine);
+      
+      // Label jari-jari
+      const radiusLabel = createTextLabel('r', new THREE.Vector3(0.5, 1.3, 0));
+      scene.add(radiusLabel);
+      dashLines.push(radiusLabel);
+    }
+  } 
+  else if (currentShape === 'cone') {
+    geometry = new THREE.ConeGeometry(1.2, 2.6, 48);
+    mesh = new THREE.Mesh(geometry, material);
+    
+    // Garis putus-putus untuk KERUCUT
+    if (currentZoom === 'height') {
+      // Garis tinggi dari puncak ke pusat alas
+      const heightLine = createDashedLine(new THREE.Vector3(0, 1.3, 0), new THREE.Vector3(0, -1.3, 0), 0xff6b6b);
+      scene.add(heightLine);
+      dashLines.push(heightLine);
+      
+      const heightLabel = createTextLabel('t (tinggi)', new THREE.Vector3(0.3, 0, 0));
+      scene.add(heightLabel);
+      dashLines.push(heightLabel);
+    } else if (currentZoom === 'lateral') {
+      // Garis pelukis dari puncak ke tepi alas
+      const slantLine = createDashedLine(new THREE.Vector3(0, 1.3, 0), new THREE.Vector3(1.2, -1.3, 0), 0xffa500);
+      scene.add(slantLine);
+      dashLines.push(slantLine);
+      
+      const slantLabel = createTextLabel('s (garis pelukis)', new THREE.Vector3(0.7, 0, 0.2));
+      scene.add(slantLabel);
+      dashLines.push(slantLabel);
+    } else if (currentZoom === 'base') {
+      // Garis jari-jari
+      const radiusLine = createDashedLine(new THREE.Vector3(0, -1.3, 0), new THREE.Vector3(1.2, -1.3, 0), 0x4ecdc4);
+      scene.add(radiusLine);
+      dashLines.push(radiusLine);
+      
+      const radiusLabel = createTextLabel('r', new THREE.Vector3(0.6, -1.1, 0));
+      scene.add(radiusLabel);
+      dashLines.push(radiusLabel);
+    }
+  } 
+  else {
+    geometry = new THREE.SphereGeometry(1.3, 48, 48);
+    mesh = new THREE.Mesh(geometry, material);
+    
+    // Garis putus-putus untuk BOLA
+    // Garis jari-jari dari pusat ke tepi
+    const radiusLine = createDashedLine(new THREE.Vector3(0, 0, 0), new THREE.Vector3(1.3, 0, 0), 0x4ecdc4);
+    scene.add(radiusLine);
+    dashLines.push(radiusLine);
+    
+    const radiusLabel = createTextLabel('r (jari-jari)', new THREE.Vector3(0.7, 0.2, 0));
+    scene.add(radiusLabel);
+    dashLines.push(radiusLabel);
+    
+    // Garis diameter
+    const diameterLine = createDashedLine(new THREE.Vector3(-1.3, 0, 0), new THREE.Vector3(1.3, 0, 0), 0xff6b6b);
+    scene.add(diameterLine);
+    dashLines.push(diameterLine);
+    
+    const diameterLabel = createTextLabel('d (diameter)', new THREE.Vector3(0, -0.3, 0));
+    scene.add(diameterLabel);
+    dashLines.push(diameterLabel);
+  }
+  
   mesh.rotation.x = 0.35;
   mesh.rotation.z = 0.25;
   scene.add(mesh);
+}
+
+// Fungsi untuk membuat label teks pada 3D
+function createTextLabel(text, position) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ff6b6b';
+  ctx.font = 'Bold 32px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 128, 32);
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+  const geometry = new THREE.PlaneGeometry(0.8, 0.2);
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.copy(position);
+  mesh.position.z += 0.5; // Agar terlihat di depan
+  return mesh;
 }
 
 function animate() {
@@ -81,6 +208,7 @@ function setPart(part) {
   currentZoom = part;
   document.querySelectorAll('.part-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.part === part));
   updateInfo();
+  drawShape(); // Redraw untuk menampilkan garis yang berbeda
   showFormulaPopup();
 }
 
@@ -103,9 +231,26 @@ function showFormulaPopup() {
 function generatePartButtons() {
   const container = document.getElementById('partButtons');
   container.innerHTML = '';
-  const parts = ['base', 'lateral', 'height'];
-  const icons = ['🎯', '🔄', '📏'];
-  const labels = ['Alas', 'Selimut', 'Tinggi'];
+  
+  let parts, icons, labels;
+  
+  if (currentShape === 'sphere') {
+    // Untuk Bola: Jari-jari, Volume, Luas Permukaan
+    parts = ['base', 'lateral', 'height'];
+    icons = ['⚪', '📊', '📏'];
+    labels = ['Luas Permukaan', 'Volume', 'Jari-jari'];
+  } else if (currentShape === 'cone') {
+    // Untuk Kerucut: Alas, Selimut, Garis Pelukis
+    parts = ['base', 'lateral', 'height'];
+    icons = ['🎯', '🔄', '📐'];
+    labels = ['Alas', 'Selimut', 'Garis Pelukis'];
+  } else {
+    // Untuk Tabung: Alas, Selimut, Tinggi
+    parts = ['base', 'lateral', 'height'];
+    icons = ['🎯', '🔄', '📏'];
+    labels = ['Alas', 'Selimut', 'Tinggi'];
+  }
+  
   parts.forEach((part, idx) => {
     const btn = document.createElement('button');
     btn.className = `part-btn ${part === 'base' ? 'active' : ''}`;
