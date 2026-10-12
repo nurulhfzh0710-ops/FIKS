@@ -19,7 +19,7 @@ const shapeInfo = {
 
 let scene, camera, renderer, mesh, sessionId = '', currentShape = 'cylinder', currentZoom = 'base';
 let quizState = { currentQuestion: 0, score: 0, selectedAnswer: null, answered: false, questions: [] };
-let dashLines = []; // Untuk menyimpan garis putus-putus
+let dashLines = [];
 
 // 🔐 UTILITY FUNCTIONS
 function hashSeed(str) { let h = 0; for (let i = 0; i < str.length; i++) { h = (h << 5) - h + str.charCodeAt(i); h |= 0; } return Math.abs(h); }
@@ -47,145 +47,108 @@ function initThreeJS() {
   animate();
 }
 
-// Fungsi untuk membuat garis putus-putus
-function createDashedLine(start, end, color = 0xff6b6b, dashSize = 0.08, gapSize = 0.06) {
+function createDashedLine(start, end, color = 0xff6b6b) {
   const points = [];
   const direction = new THREE.Vector3().subVectors(end, start).normalize();
   const distance = start.distanceTo(end);
-  let currentPos = start.clone();
-  
-  while (currentPos.distanceTo(end) > 0.01) {
-    const segmentEnd = currentPos.clone().addScaledVector(direction, Math.min(dashSize, currentPos.distanceTo(end)));
-    points.push(currentPos.clone());
-    points.push(segmentEnd);
-    currentPos.addScaledVector(direction, dashSize + gapSize);
+  const dashLength = 0.09;
+  const gapLength = 0.06;
+  let current = start.clone();
+  while (current.distanceTo(end) > 0.01) {
+    const next = current.clone().addScaledVector(direction, Math.min(dashLength, current.distanceTo(end)));
+    points.push(current.clone());
+    points.push(next);
+    current.addScaledVector(direction, dashLength + gapLength);
   }
-  
   const geometry = new THREE.BufferGeometry().setFromPoints(points);
   const material = new THREE.LineBasicMaterial({ color, linewidth: 2 });
-  const line = new THREE.LineSegments(geometry, material);
-  return line;
+  return new THREE.LineSegments(geometry, material);
+}
+
+function createTextLabel(text, position, color = '#ff6b6b') {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 256, 64);
+  ctx.fillStyle = color;
+  ctx.font = 'Bold 26px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 128, 32);
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+  const geometry = new THREE.PlaneGeometry(0.9, 0.22);
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.copy(position);
+  mesh.position.z += 0.5;
+  return mesh;
 }
 
 function drawShape() {
   if (mesh) scene.remove(mesh);
   dashLines.forEach(line => scene.remove(line));
   dashLines = [];
-  
   const material = new THREE.MeshPhongMaterial({
     color: 0x667eea, shininess: 120, emissive: 0x1a1a2e, emissiveIntensity: 0.08
   });
   let geometry;
-  
+
   if (currentShape === 'cylinder') {
     geometry = new THREE.CylinderGeometry(1, 1, 2.2, 48);
     mesh = new THREE.Mesh(geometry, material);
-    
-    // Garis putus-putus untuk TABUNG
     if (currentZoom === 'height') {
-      // Garis tinggi di tengah
       const heightLine = createDashedLine(new THREE.Vector3(0, -1.1, 0), new THREE.Vector3(0, 1.1, 0), 0xff6b6b);
+      const heightLabel = createTextLabel('t', new THREE.Vector3(0.28, 0, 0), '#ff6b6b');
       scene.add(heightLine);
-      dashLines.push(heightLine);
-      
-      // Label tinggi
-      const heightLabel = createTextLabel('t (tinggi)', new THREE.Vector3(0.3, 0, 0));
       scene.add(heightLabel);
-      dashLines.push(heightLabel);
+      dashLines.push(heightLine, heightLabel);
     } else if (currentZoom === 'base') {
-      // Garis jari-jari
-      const radiusLine = createDashedLine(new THREE.Vector3(0, 1.1, 0), new THREE.Vector3(1, 1.1, 0), 0x4ecdc4);
+      const radiusLine = createDashedLine(new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0), 0x4ecdc4);
+      const radiusLabel = createTextLabel('r', new THREE.Vector3(0.54, 0.22, 0), '#4ecdc4');
       scene.add(radiusLine);
-      dashLines.push(radiusLine);
-      
-      // Label jari-jari
-      const radiusLabel = createTextLabel('r', new THREE.Vector3(0.5, 1.3, 0));
       scene.add(radiusLabel);
-      dashLines.push(radiusLabel);
+      dashLines.push(radiusLine, radiusLabel);
     }
-  } 
-  else if (currentShape === 'cone') {
+  } else if (currentShape === 'cone') {
     geometry = new THREE.ConeGeometry(1.2, 2.6, 48);
     mesh = new THREE.Mesh(geometry, material);
-    
-    // Garis putus-putus untuk KERUCUT
     if (currentZoom === 'height') {
-      // Garis tinggi dari puncak ke pusat alas
       const heightLine = createDashedLine(new THREE.Vector3(0, 1.3, 0), new THREE.Vector3(0, -1.3, 0), 0xff6b6b);
+      const heightLabel = createTextLabel('t', new THREE.Vector3(0.28, 0, 0), '#ff6b6b');
       scene.add(heightLine);
-      dashLines.push(heightLine);
-      
-      const heightLabel = createTextLabel('t (tinggi)', new THREE.Vector3(0.3, 0, 0));
       scene.add(heightLabel);
-      dashLines.push(heightLabel);
+      dashLines.push(heightLine, heightLabel);
     } else if (currentZoom === 'lateral') {
-      // Garis pelukis dari puncak ke tepi alas
       const slantLine = createDashedLine(new THREE.Vector3(0, 1.3, 0), new THREE.Vector3(1.2, -1.3, 0), 0xffa500);
+      const slantLabel = createTextLabel('s', new THREE.Vector3(0.8, -0.1, 0.2), '#ffa500');
       scene.add(slantLine);
-      dashLines.push(slantLine);
-      
-      const slantLabel = createTextLabel('s (garis pelukis)', new THREE.Vector3(0.7, 0, 0.2));
       scene.add(slantLabel);
-      dashLines.push(slantLabel);
+      dashLines.push(slantLine, slantLabel);
     } else if (currentZoom === 'base') {
-      // Garis jari-jari
       const radiusLine = createDashedLine(new THREE.Vector3(0, -1.3, 0), new THREE.Vector3(1.2, -1.3, 0), 0x4ecdc4);
+      const radiusLabel = createTextLabel('r', new THREE.Vector3(0.6, -1.05, 0), '#4ecdc4');
       scene.add(radiusLine);
-      dashLines.push(radiusLine);
-      
-      const radiusLabel = createTextLabel('r', new THREE.Vector3(0.6, -1.1, 0));
       scene.add(radiusLabel);
-      dashLines.push(radiusLabel);
+      dashLines.push(radiusLine, radiusLabel);
     }
-  } 
-  else {
+  } else {
     geometry = new THREE.SphereGeometry(1.3, 48, 48);
     mesh = new THREE.Mesh(geometry, material);
-    
-    // Garis putus-putus untuk BOLA
-    // Garis jari-jari dari pusat ke tepi
     const radiusLine = createDashedLine(new THREE.Vector3(0, 0, 0), new THREE.Vector3(1.3, 0, 0), 0x4ecdc4);
-    scene.add(radiusLine);
-    dashLines.push(radiusLine);
-    
-    const radiusLabel = createTextLabel('r (jari-jari)', new THREE.Vector3(0.7, 0.2, 0));
-    scene.add(radiusLabel);
-    dashLines.push(radiusLabel);
-    
-    // Garis diameter
+    const radiusLabel = createTextLabel('r', new THREE.Vector3(0.7, 0.2, 0), '#4ecdc4');
     const diameterLine = createDashedLine(new THREE.Vector3(-1.3, 0, 0), new THREE.Vector3(1.3, 0, 0), 0xff6b6b);
+    const diameterLabel = createTextLabel('d', new THREE.Vector3(0, -0.28, 0), '#ff6b6b');
+    scene.add(radiusLine);
+    scene.add(radiusLabel);
     scene.add(diameterLine);
-    dashLines.push(diameterLine);
-    
-    const diameterLabel = createTextLabel('d (diameter)', new THREE.Vector3(0, -0.3, 0));
     scene.add(diameterLabel);
-    dashLines.push(diameterLabel);
+    dashLines.push(radiusLine, radiusLabel, diameterLine, diameterLabel);
   }
-  
+
   mesh.rotation.x = 0.35;
   mesh.rotation.z = 0.25;
   scene.add(mesh);
-}
-
-// Fungsi untuk membuat label teks pada 3D
-function createTextLabel(text, position) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 64;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#ff6b6b';
-  ctx.font = 'Bold 32px Arial';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, 128, 32);
-  
-  const texture = new THREE.CanvasTexture(canvas);
-  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
-  const geometry = new THREE.PlaneGeometry(0.8, 0.2);
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.position.copy(position);
-  mesh.position.z += 0.5; // Agar terlihat di depan
-  return mesh;
 }
 
 function animate() {
@@ -202,13 +165,14 @@ function setShape(shape) {
   drawShape();
   updateInfo();
   generateQuiz();
+  generatePartButtons();
 }
 
 function setPart(part) {
   currentZoom = part;
   document.querySelectorAll('.part-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.part === part));
   updateInfo();
-  drawShape(); // Redraw untuk menampilkan garis yang berbeda
+  drawShape();
   showFormulaPopup();
 }
 
@@ -231,26 +195,22 @@ function showFormulaPopup() {
 function generatePartButtons() {
   const container = document.getElementById('partButtons');
   container.innerHTML = '';
-  
   let parts, icons, labels;
-  
+
   if (currentShape === 'sphere') {
-    // Untuk Bola: Jari-jari, Volume, Luas Permukaan
     parts = ['base', 'lateral', 'height'];
     icons = ['⚪', '📊', '📏'];
     labels = ['Luas Permukaan', 'Volume', 'Jari-jari'];
   } else if (currentShape === 'cone') {
-    // Untuk Kerucut: Alas, Selimut, Garis Pelukis
     parts = ['base', 'lateral', 'height'];
     icons = ['🎯', '🔄', '📐'];
     labels = ['Alas', 'Selimut', 'Garis Pelukis'];
   } else {
-    // Untuk Tabung: Alas, Selimut, Tinggi
     parts = ['base', 'lateral', 'height'];
     icons = ['🎯', '🔄', '📏'];
     labels = ['Alas', 'Selimut', 'Tinggi'];
   }
-  
+
   parts.forEach((part, idx) => {
     const btn = document.createElement('button');
     btn.className = `part-btn ${part === 'base' ? 'active' : ''}`;
@@ -261,7 +221,6 @@ function generatePartButtons() {
   });
 }
 
-// 🎮 QUIZ SYSTEM
 function buildQuestions() {
   const data = quizDatabase[currentShape] || quizDatabase.cylinder;
   const seed = hashSeed(`${sessionId}-${currentShape}`);
@@ -281,16 +240,14 @@ function renderQuestion() {
   document.getElementById('questionCounter').textContent = `${quizState.currentQuestion + 1}/${total}`;
   document.getElementById('progressBar').style.width = `${((quizState.currentQuestion + 1) / total) * 100}%`;
   document.getElementById('progressPercent').textContent = `${Math.round(((quizState.currentQuestion + 1) / total) * 100)}%`;
-  
   const diffClass = `difficulty-${q.difficulty}`;
   const diffLabel = { easy: '⭐ Mudah', medium: '⭐⭐ Sedang', hard: '⭐⭐⭐ Sulit' }[q.difficulty];
-  
   let html = `<div class="difficulty-tag ${diffClass}">${diffLabel}</div><h4>${q.question}</h4><div class="options-list">`;
   q.options.forEach((opt, i) => {
     html += `<label class="option-item"><input type="radio" name="answer" value="${i}" ${quizState.answered ? 'disabled' : ''}><span>${String.fromCharCode(65 + i)}. ${opt}</span></label>`;
   });
   html += '</div>';
-  
+
   if (quizState.answered) {
     const isCorrect = quizState.selectedAnswer === q.correct;
     const cls = isCorrect ? 'correct' : 'incorrect';
@@ -298,7 +255,7 @@ function renderQuestion() {
     const stepsHtml = q.steps.map(s => `<div class="step-item">${s}</div>`).join('');
     html += `<div class="feedback-box show ${cls}"><strong>${emoji} ${q.explanation}</strong><div class="steps-container"><strong>📖 Langkah Pengerjaan:</strong>${stepsHtml}</div></div>`;
   }
-  
+
   document.getElementById('quizContent').innerHTML = html;
   const inputs = document.querySelectorAll('input[name="answer"]');
   inputs.forEach(input => {
@@ -337,13 +294,13 @@ function showResults() {
   const scoreCircle = document.getElementById('scoreCircle');
   scoreCircle.textContent = `${quizState.score}/${total}`;
   scoreCircle.className = 'score-circle';
-  
+
   let message = '', emoji = '';
   if (percent >= 80) { scoreCircle.classList.add('excellent'); message = '🎉 LUAR BIASA! Kamu sudah mahir bangun ruang!'; emoji = '🏆'; }
   else if (percent >= 60) { scoreCircle.classList.add('good'); message = '😊 Bagus! Terus latihan untuk sempurna.'; emoji = '⭐'; }
   else if (percent >= 40) { scoreCircle.classList.add('fair'); message = '📚 Lumayan! Pelajari lagi konsepnya.'; emoji = '💪'; }
   else { scoreCircle.classList.add('poor'); message = '🚀 Jangan menyerah! Coba lagi dengan serius.'; emoji = '🎯'; }
-  
+
   document.getElementById('resultMessage').textContent = `${emoji} ${message}`;
   document.getElementById('quizContainer').style.display = 'none';
   document.getElementById('resultsPanel').classList.add('show');
